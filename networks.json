@@ -3,6 +3,9 @@
     "FPMMDeterministicFactory": {
       "address": "0xDDF74905AD9ff90977154DF960E21517f7e11ACA",
       "startBlock": 71002379
+    },
+    "ConditionalTokens": {
+      "address": "0xAD1a38cEc043e70E83a3eC30443dB285ED10D774"
     }
   }
 }
