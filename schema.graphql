@@ -1,0 +1,77 @@
+type FixedProductMarketMakerCreation @entity(immutable: true) {
+  id: Bytes!
+  creator: Bytes! # address
+  fixedProductMarketMaker: Bytes! # address
+  conditionalTokens: Bytes! # address
+  collateralToken: Bytes! # address
+  conditionIds: [Bytes!]! # bytes32[]
+  fee: BigInt! # uint256
+  maxFee: BigInt! # uint256
+  endTime: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type OwnershipTransferred @entity(immutable: true) {
+  id: Bytes!
+  previousOwner: Bytes! # address
+  newOwner: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type FPMMFundingAdded @entity(immutable: true) {
+  id: Bytes!
+  funder: Bytes! # address
+  amountsAdded: [BigInt!]! # uint256[]
+  sharesMinted: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type FPMMFundingRemoved @entity(immutable: true) {
+  id: Bytes!
+  funder: Bytes! # address
+  amountsRemoved: [BigInt!]! # uint256[]
+  collateralRemovedFromFeePool: BigInt! # uint256
+  sharesBurnt: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type FPMMBuy @entity(immutable: true) {
+  id: Bytes!
+  buyer: Bytes! # address
+  investmentAmount: BigInt! # uint256
+  feeAmount: BigInt! # uint256
+  outcomeIndex: BigInt! # uint256
+  outcomeTokensBought: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type FPMMSell @entity(immutable: true) {
+  id: Bytes!
+  seller: Bytes! # address
+  returnAmount: BigInt! # uint256
+  feeAmount: BigInt! # uint256
+  outcomeIndex: BigInt! # uint256
+  outcomeTokensSold: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type CloneCreated @entity(immutable: true) {
+  id: Bytes!
+  target: Bytes! # address
+  clone: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}

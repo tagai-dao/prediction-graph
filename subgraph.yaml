@@ -1,0 +1,44 @@
+specVersion: 1.3.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: FPMMDeterministicFactory
+    network: bsc
+    source:
+      address: "0xDDF74905AD9ff90977154DF960E21517f7e11ACA"
+      abi: FPMMDeterministicFactory
+      startBlock: 71002379
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - FixedProductMarketMakerCreation
+        - OwnershipTransferred
+        - FPMMFundingAdded
+        - FPMMFundingRemoved
+        - FPMMBuy
+        - FPMMSell
+        - CloneCreated
+      abis:
+        - name: FPMMDeterministicFactory
+          file: ./abis/FPMMDeterministicFactory.json
+      eventHandlers:
+        - event: FixedProductMarketMakerCreation(indexed address,address,address,address,bytes32[],uint256,uint256,uint256)
+          handler: handleFixedProductMarketMakerCreation
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: FPMMFundingAdded(indexed address,uint256[],uint256)
+          handler: handleFPMMFundingAdded
+        - event: FPMMFundingRemoved(indexed address,uint256[],uint256,uint256)
+          handler: handleFPMMFundingRemoved
+        - event: FPMMBuy(indexed address,uint256,uint256,indexed uint256,uint256)
+          handler: handleFPMMBuy
+        - event: FPMMSell(indexed address,uint256,uint256,indexed uint256,uint256)
+          handler: handleFPMMSell
+        - event: CloneCreated(indexed address,address)
+          handler: handleCloneCreated
+      file: ./src/fpmm-deterministic-factory.ts
