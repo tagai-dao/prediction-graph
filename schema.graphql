@@ -1,29 +1,54 @@
-type FixedProductMarketMakerCreation @entity(immutable: true) {
+type Counter @entity(immutable: false) {
   id: Bytes!
+  index: BigInt!
+}
+
+type FixedProductMarketMakerCreation @entity(immutable: false) {
+  id: Bytes!
+  index: BigInt!
   creator: Bytes! # address
   fixedProductMarketMaker: Bytes! # address
   conditionalTokens: Bytes! # address
   collateralToken: Bytes! # address
   conditionIds: [Bytes!]! # bytes32[]
+  positionIds: [Bytes!]! # bytes32[]
   fee: BigInt! # uint256
   maxFee: BigInt! # uint256
   endTime: BigInt! # uint256
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
+  solved: Boolean! # bool
 }
 
-type OwnershipTransferred @entity(immutable: true) {
-  id: Bytes!
-  previousOwner: Bytes! # address
-  newOwner: Bytes! # address
+type User @entity(immutable: false) {
+  id: Bytes! # address
+  index: BigInt!
+  address: Bytes! # address
+  holdings: [UserHolding!]! @derivedFrom(field: "user")
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
 
+type UserHolding @entity(immutable: false){
+  id: Bytes! # Set as `${marketAddress}-${userAddress}`
+  user: User!
+  fpmm: FixedProductMarketMakerCreation!
+  balances: [BigInt!]! # uint256[] - Outcome Token Balances
+  lpHolding: BigInt! # uint256 - LP Token Balance
+}
+
+# 辅助实体：用于将全局的 PositionId 映射回具体的 Market 和 OutcomeIndex
+type PositionMap @entity(immutable: true) {
+  id: String! # uint256 PositionId to Hex String
+  fpmm: FixedProductMarketMakerCreation!
+  outcomeIndex: Int!
+}
+
 type FPMMFundingAdded @entity(immutable: true) {
   id: Bytes!
+  index: BigInt!
   funder: Bytes! # address
   amountsAdded: [BigInt!]! # uint256[]
   sharesMinted: BigInt! # uint256
@@ -34,6 +59,7 @@ type FPMMFundingAdded @entity(immutable: true) {
 
 type FPMMFundingRemoved @entity(immutable: true) {
   id: Bytes!
+  index: BigInt!
   funder: Bytes! # address
   amountsRemoved: [BigInt!]! # uint256[]
   collateralRemovedFromFeePool: BigInt! # uint256
@@ -45,6 +71,7 @@ type FPMMFundingRemoved @entity(immutable: true) {
 
 type FPMMBuy @entity(immutable: true) {
   id: Bytes!
+  index: BigInt!
   buyer: Bytes! # address
   investmentAmount: BigInt! # uint256
   feeAmount: BigInt! # uint256
@@ -57,124 +84,12 @@ type FPMMBuy @entity(immutable: true) {
 
 type FPMMSell @entity(immutable: true) {
   id: Bytes!
+  index: BigInt!
   seller: Bytes! # address
   returnAmount: BigInt! # uint256
   feeAmount: BigInt! # uint256
   outcomeIndex: BigInt! # uint256
   outcomeTokensSold: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type CloneCreated @entity(immutable: true) {
-  id: Bytes!
-  target: Bytes! # address
-  clone: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-type ConditionPreparation @entity(immutable: true) {
-  id: Bytes!
-  conditionId: Bytes! # bytes32
-  oracle: Bytes! # address
-  questionId: Bytes! # bytes32
-  outcomeSlotCount: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type ConditionResolution @entity(immutable: true) {
-  id: Bytes!
-  conditionId: Bytes! # bytes32
-  oracle: Bytes! # address
-  questionId: Bytes! # bytes32
-  outcomeSlotCount: BigInt! # uint256
-  payoutNumerators: [BigInt!]! # uint256[]
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type PositionSplit @entity(immutable: true) {
-  id: Bytes!
-  stakeholder: Bytes! # address
-  collateralToken: Bytes! # address
-  parentCollectionId: Bytes! # bytes32
-  conditionId: Bytes! # bytes32
-  partition: [BigInt!]! # uint256[]
-  amount: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type PositionsMerge @entity(immutable: true) {
-  id: Bytes!
-  stakeholder: Bytes! # address
-  collateralToken: Bytes! # address
-  parentCollectionId: Bytes! # bytes32
-  conditionId: Bytes! # bytes32
-  partition: [BigInt!]! # uint256[]
-  amount: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type PayoutRedemption @entity(immutable: true) {
-  id: Bytes!
-  redeemer: Bytes! # address
-  collateralToken: Bytes! # address
-  parentCollectionId: Bytes! # bytes32
-  conditionId: Bytes! # bytes32
-  indexSets: [BigInt!]! # uint256[]
-  payout: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type TransferSingle @entity(immutable: true) {
-  id: Bytes!
-  operator: Bytes! # address
-  from: Bytes! # address
-  to: Bytes! # address
-  internal_id: BigInt! # uint256
-  value: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type TransferBatch @entity(immutable: true) {
-  id: Bytes!
-  operator: Bytes! # address
-  from: Bytes! # address
-  to: Bytes! # address
-  ids: [BigInt!]! # uint256[]
-  values: [BigInt!]! # uint256[]
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type ApprovalForAll @entity(immutable: true) {
-  id: Bytes!
-  owner: Bytes! # address
-  operator: Bytes! # address
-  approved: Boolean! # bool
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type URI @entity(immutable: true) {
-  id: Bytes!
-  value: String! # string
-  internal_id: BigInt! # uint256
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!

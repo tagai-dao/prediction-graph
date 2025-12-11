@@ -1,174 +1,89 @@
 import {
-  ConditionPreparation as ConditionPreparationEvent,
-  ConditionResolution as ConditionResolutionEvent,
-  PositionSplit as PositionSplitEvent,
-  PositionsMerge as PositionsMergeEvent,
-  PayoutRedemption as PayoutRedemptionEvent,
   TransferSingle as TransferSingleEvent,
   TransferBatch as TransferBatchEvent,
   ApprovalForAll as ApprovalForAllEvent,
   URI as URIEvent,
 } from "../generated/ConditionalTokens/ConditionalTokens"
 import {
-  ConditionPreparation,
-  ConditionResolution,
-  PositionSplit,
-  PositionsMerge,
-  PayoutRedemption,
-  TransferSingle,
-  TransferBatch,
-  ApprovalForAll,
-  URI,
+  PositionMap
 } from "../generated/schema"
-
-export function handleConditionPreparation(
-  event: ConditionPreparationEvent,
-): void {
-  let entity = new ConditionPreparation(
-    event.transaction.hash.concatI32(event.logIndex.toI32()),
-  )
-  entity.conditionId = event.params.conditionId
-  entity.oracle = event.params.oracle
-  entity.questionId = event.params.questionId
-  entity.outcomeSlotCount = event.params.outcomeSlotCount
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleConditionResolution(
-  event: ConditionResolutionEvent,
-): void {
-  let entity = new ConditionResolution(
-    event.transaction.hash.concatI32(event.logIndex.toI32()),
-  )
-  entity.conditionId = event.params.conditionId
-  entity.oracle = event.params.oracle
-  entity.questionId = event.params.questionId
-  entity.outcomeSlotCount = event.params.outcomeSlotCount
-  entity.payoutNumerators = event.params.payoutNumerators
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handlePositionSplit(event: PositionSplitEvent): void {
-  let entity = new PositionSplit(
-    event.transaction.hash.concatI32(event.logIndex.toI32()),
-  )
-  entity.stakeholder = event.params.stakeholder
-  entity.collateralToken = event.params.collateralToken
-  entity.parentCollectionId = event.params.parentCollectionId
-  entity.conditionId = event.params.conditionId
-  entity.partition = event.params.partition
-  entity.amount = event.params.amount
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handlePositionsMerge(event: PositionsMergeEvent): void {
-  let entity = new PositionsMerge(
-    event.transaction.hash.concatI32(event.logIndex.toI32()),
-  )
-  entity.stakeholder = event.params.stakeholder
-  entity.collateralToken = event.params.collateralToken
-  entity.parentCollectionId = event.params.parentCollectionId
-  entity.conditionId = event.params.conditionId
-  entity.partition = event.params.partition
-  entity.amount = event.params.amount
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handlePayoutRedemption(event: PayoutRedemptionEvent): void {
-  let entity = new PayoutRedemption(
-    event.transaction.hash.concatI32(event.logIndex.toI32()),
-  )
-  entity.redeemer = event.params.redeemer
-  entity.collateralToken = event.params.collateralToken
-  entity.parentCollectionId = event.params.parentCollectionId
-  entity.conditionId = event.params.conditionId
-  entity.indexSets = event.params.indexSets
-  entity.payout = event.params.payout
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
+import { getOrCreateUser, getOrCreateUserHolding } from "./utils"
+import { Address } from "@graphprotocol/graph-ts"
 
 export function handleTransferSingle(event: TransferSingleEvent): void {
-  let entity = new TransferSingle(
-    event.transaction.hash.concatI32(event.logIndex.toI32()),
-  )
-  entity.operator = event.params.operator
-  entity.from = event.params.from
-  entity.to = event.params.to
-  entity.internal_id = event.params.id
-  entity.value = event.params.value
+  // Update User Balances
+  let positionId = event.params.id.toHexString()
+  let map = PositionMap.load(positionId)
+  
+  if (map != null) {
+    let marketAddress = map.fpmm
+    let outcomeIndex = map.outcomeIndex
+    let zeroAddress = Address.fromString("0x0000000000000000000000000000000000000000")
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
+    // From
+    if (event.params.from != zeroAddress) {
+        getOrCreateUser(event.params.from, event.block, event.transaction)
+        let holding = getOrCreateUserHolding(event.params.from, marketAddress)
+        let balances = holding.balances
+        if (outcomeIndex < balances.length) {
+          balances[outcomeIndex] = balances[outcomeIndex].minus(event.params.value)
+          holding.balances = balances
+          holding.save()
+        }
+    }
 
-  entity.save()
+    // To
+    if (event.params.to != zeroAddress) {
+        getOrCreateUser(event.params.to, event.block, event.transaction)
+        let holding = getOrCreateUserHolding(event.params.to, marketAddress)
+        let balances = holding.balances
+        if (outcomeIndex < balances.length) {
+          balances[outcomeIndex] = balances[outcomeIndex].plus(event.params.value)
+          holding.balances = balances
+          holding.save()
+        }
+    }
+  }
 }
 
 export function handleTransferBatch(event: TransferBatchEvent): void {
-  let entity = new TransferBatch(
-    event.transaction.hash.concatI32(event.logIndex.toI32()),
-  )
-  entity.operator = event.params.operator
-  entity.from = event.params.from
-  entity.to = event.params.to
-  entity.ids = event.params.ids
-  entity.values = event.params.values
+  // Update User Balances
+  let ids = event.params.ids
+  let values = event.params.values
+  let zeroAddress = Address.fromString("0x0000000000000000000000000000000000000000")
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
+  for (let i = 0; i < ids.length; i++) {
+    let positionId = ids[i].toHexString()
+    let map = PositionMap.load(positionId)
+    
+    if (map != null) {
+      let marketAddress = map.fpmm
+      let outcomeIndex = map.outcomeIndex
+      let value = values[i]
 
-  entity.save()
-}
+      // From
+      if (event.params.from != zeroAddress) {
+          getOrCreateUser(event.params.from, event.block, event.transaction)
+          let holding = getOrCreateUserHolding(event.params.from, marketAddress)
+          let balances = holding.balances
+          if (outcomeIndex < balances.length) {
+            balances[outcomeIndex] = balances[outcomeIndex].minus(value)
+            holding.balances = balances
+            holding.save()
+          }
+      }
 
-export function handleApprovalForAll(event: ApprovalForAllEvent): void {
-  let entity = new ApprovalForAll(
-    event.transaction.hash.concatI32(event.logIndex.toI32()),
-  )
-  entity.owner = event.params.owner
-  entity.operator = event.params.operator
-  entity.approved = event.params.approved
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleURI(event: URIEvent): void {
-  let entity = new URI(event.transaction.hash.concatI32(event.logIndex.toI32()))
-  entity.value = event.params.value
-  entity.internal_id = event.params.id
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
+      // To
+      if (event.params.to != zeroAddress) {
+          getOrCreateUser(event.params.to, event.block, event.transaction)
+          let holding = getOrCreateUserHolding(event.params.to, marketAddress)
+          let balances = holding.balances
+          if (outcomeIndex < balances.length) {
+            balances[outcomeIndex] = balances[outcomeIndex].plus(value)
+            holding.balances = balances
+            holding.save()
+          }
+      }
+    }
+  }
 }

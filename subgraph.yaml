@@ -17,31 +17,13 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - FixedProductMarketMakerCreation
-        - OwnershipTransferred
-        - FPMMFundingAdded
-        - FPMMFundingRemoved
-        - FPMMBuy
-        - FPMMSell
-        - CloneCreated
+        - PositionMap
       abis:
         - name: FPMMDeterministicFactory
           file: ./abis/FPMMDeterministicFactory.json
       eventHandlers:
-        - event: FixedProductMarketMakerCreation(indexed
-            address,address,address,address,bytes32[],uint256,uint256,uint256)
+        - event: FixedProductMarketMakerCreation(indexed address,address,address,address,bytes32[],uint256,uint256,uint256)
           handler: handleFixedProductMarketMakerCreation
-        - event: OwnershipTransferred(indexed address,indexed address)
-          handler: handleOwnershipTransferred
-        - event: FPMMFundingAdded(indexed address,uint256[],uint256)
-          handler: handleFPMMFundingAdded
-        - event: FPMMFundingRemoved(indexed address,uint256[],uint256,uint256)
-          handler: handleFPMMFundingRemoved
-        - event: FPMMBuy(indexed address,uint256,uint256,indexed uint256,uint256)
-          handler: handleFPMMBuy
-        - event: FPMMSell(indexed address,uint256,uint256,indexed uint256,uint256)
-          handler: handleFPMMSell
-        - event: CloneCreated(indexed address,address)
-          handler: handleCloneCreated
       file: ./src/fpmm-deterministic-factory.ts
   - kind: ethereum
     name: ConditionalTokens
@@ -55,39 +37,41 @@ dataSources:
       apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - ConditionPreparation
-        - ConditionResolution
-        - PositionSplit
-        - PositionsMerge
-        - PayoutRedemption
         - TransferSingle
         - TransferBatch
-        - ApprovalForAll
-        - URI
       abis:
         - name: ConditionalTokens
           file: ./abis/ConditionalTokens.json
       eventHandlers:
-        - event: ConditionPreparation(indexed bytes32,indexed address,indexed bytes32,uint256)
-          handler: handleConditionPreparation
-        - event: ConditionResolution(indexed bytes32,indexed address,indexed
-            bytes32,uint256,uint256[])
-          handler: handleConditionResolution
-        - event: PositionSplit(indexed address,address,indexed bytes32,indexed
-            bytes32,uint256[],uint256)
-          handler: handlePositionSplit
-        - event: PositionsMerge(indexed address,address,indexed bytes32,indexed
-            bytes32,uint256[],uint256)
-          handler: handlePositionsMerge
-        - event: PayoutRedemption(indexed address,indexed address,indexed
-            bytes32,bytes32,uint256[],uint256)
-          handler: handlePayoutRedemption
         - event: TransferSingle(indexed address,indexed address,indexed address,uint256,uint256)
           handler: handleTransferSingle
         - event: TransferBatch(indexed address,indexed address,indexed address,uint256[],uint256[])
           handler: handleTransferBatch
-        - event: ApprovalForAll(indexed address,indexed address,bool)
-          handler: handleApprovalForAll
-        - event: URI(string,indexed uint256)
-          handler: handleURI
       file: ./src/conditional-tokens.ts
+templates:
+  - kind: ethereum/contract
+    name: FixedProductMarketMaker
+    network: bsc
+    source:
+      abi: FixedProductMarketMaker
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/fixed-product-market-maker.ts
+      entities:
+        - UserHolding
+      abis:
+        - name: FixedProductMarketMaker
+          file: ./abis/FixedProductMarketMaker.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+        - event: FPMMFundingAdded(indexed address,uint256[],uint256)
+          handler: handleFPMMFundingAdded
+        - event: FPMMFundingRemoved(indexed address,uint256[],uint256,uint256)
+          handler: handleFPMMFundingRemoved
+        - event: FPMMBuy(indexed address,uint256,uint256,indexed uint256,uint256)
+          handler: handleFPMMBuy
+        - event: FPMMSell(indexed address,uint256,uint256,indexed uint256,uint256)
+          handler: handleFPMMSell

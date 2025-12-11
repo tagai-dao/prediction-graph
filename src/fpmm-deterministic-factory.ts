@@ -1,27 +1,67 @@
 import {
-  FixedProductMarketMakerCreation as FixedProductMarketMakerCreationEvent,
-  OwnershipTransferred as OwnershipTransferredEvent,
-  FPMMFundingAdded as FPMMFundingAddedEvent,
-  FPMMFundingRemoved as FPMMFundingRemovedEvent,
-  FPMMBuy as FPMMBuyEvent,
-  FPMMSell as FPMMSellEvent,
-  CloneCreated as CloneCreatedEvent
+  FixedProductMarketMakerCreation as FixedProductMarketMakerCreationEvent
 } from "../generated/FPMMDeterministicFactory/FPMMDeterministicFactory"
 import {
   FixedProductMarketMakerCreation,
-  OwnershipTransferred,
-  FPMMFundingAdded,
-  FPMMFundingRemoved,
-  FPMMBuy,
-  FPMMSell,
-  CloneCreated
+  PositionMap
 } from "../generated/schema"
+import { FixedProductMarketMaker } from "../generated/templates"
+import { ConditionalTokens } from "../generated/ConditionalTokens/ConditionalTokens"
+import { Bytes, BigInt, crypto, ByteArray, Address, log } from "@graphprotocol/graph-ts"
+
+// Helper: Calculate Collection ID
+function getCollectionId(parentCollectionId: Bytes, conditionId: Bytes, indexSet: BigInt): Bytes {
+  // abi.encodePacked(parentCollectionId, conditionId, indexSet)
+  // parentCollectionId: bytes32
+  // conditionId: bytes32
+  // indexSet: uint256 (32 bytes)
+  
+  let indexSetBytes = ByteArray.fromBigInt(indexSet)
+  // Pad indexSet to 32 bytes
+  if (indexSetBytes.length < 32) {
+    let padded = new Uint8Array(32)
+    // Reverse because fromBigInt is typically Big Endian, but let's double check.
+    // graph-ts BigInt is usually treated as uint256 big endian in conversions?
+    // Actually ByteArray.fromBigInt returns Big Endian.
+    // Padding should be at the front (zeros).
+    // e.g. [0, 0, ... value]
+    
+    // Efficient padding:
+    let offset = 32 - indexSetBytes.length
+    for (let i = 0; i < indexSetBytes.length; i++) {
+      padded[offset + i] = indexSetBytes[i]
+    }
+    indexSetBytes = Bytes.fromUint8Array(padded)
+  }
+
+  let packed = new Uint8Array(96) // 32 + 32 + 32
+  
+  for(let i=0; i<32; i++) packed[i] = parentCollectionId[i]
+  for(let i=0; i<32; i++) packed[32+i] = conditionId[i]
+  for(let i=0; i<32; i++) packed[64+i] = indexSetBytes[i]
+
+  return crypto.keccak256(Bytes.fromUint8Array(packed))
+}
+
+// Helper: Calculate Position ID
+function getPositionId(collateralToken: Address, collectionId: Bytes): Bytes {
+  // abi.encodePacked(collateralToken, collectionId)
+  // collateralToken: address (20 bytes) - but solidity packs tightly?
+  // NO, wait. getPositionId in CTHelpers:
+  // keccak256(abi.encodePacked(collateralToken, collectionId))
+  
+  let packed = new Uint8Array(20 + 32)
+  for(let i=0; i<20; i++) packed[i] = collateralToken[i]
+  for(let i=0; i<32; i++) packed[20+i] = collectionId[i]
+  
+  return crypto.keccak256(Bytes.fromUint8Array(packed))
+}
 
 export function handleFixedProductMarketMakerCreation(
   event: FixedProductMarketMakerCreationEvent
 ): void {
   let entity = new FixedProductMarketMakerCreation(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
+    event.params.fixedProductMarketMaker
   )
   entity.creator = event.params.creator
   entity.fixedProductMarketMaker = event.params.fixedProductMarketMaker
@@ -35,102 +75,66 @@ export function handleFixedProductMarketMakerCreation(
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
   entity.transactionHash = event.transaction.hash
+  entity.solved = false // Initialize
 
-  entity.save()
-}
+  // Create Template
+  FixedProductMarketMaker.create(event.params.fixedProductMarketMaker)
 
-export function handleOwnershipTransferred(
-  event: OwnershipTransferredEvent
-): void {
-  let entity = new OwnershipTransferred(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.previousOwner = event.params.previousOwner
-  entity.newOwner = event.params.newOwner
+  // Calculate Position IDs
+  let conditionalTokensContract = ConditionalTokens.bind(event.params.conditionalTokens)
+  let outcomeSlotCounts = new Array<i32>()
+  let conditionIds = event.params.conditionIds
+  
+  for (let i = 0; i < conditionIds.length; i++) {
+    let result = conditionalTokensContract.try_getOutcomeSlotCount(conditionIds[i])
+    if (!result.reverted) {
+      outcomeSlotCounts.push(result.value.toI32())
+    } else {
+      // Default to 2 if call fails (should not happen usually)
+      outcomeSlotCounts.push(2)
+      log.warning("Failed to get outcome slot count for condition: {}", [conditionIds[i].toHexString()])
+    }
+  }
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
+  // Generate all atomic positions
+  let totalOutcomes = 1
+  for (let i = 0; i < outcomeSlotCounts.length; i++) {
+    totalOutcomes *= outcomeSlotCounts[i]
+  }
 
-  entity.save()
-}
+  let positionIds = new Array<Bytes>()
+  
+  let savedPositionIds = new Array<Bytes>()
 
-export function handleFPMMFundingAdded(event: FPMMFundingAddedEvent): void {
-  let entity = new FPMMFundingAdded(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.funder = event.params.funder
-  entity.amountsAdded = event.params.amountsAdded
-  entity.sharesMinted = event.params.sharesMinted
+  for (let k = 0; k < totalOutcomes; k++) {
+    let currentVal = k
+    let indices = new Array<i32>(conditionIds.length)
+    
+    // 1. Calculate indices for each condition
+    for (let c = 0; c < conditionIds.length; c++) {
+      let slots = outcomeSlotCounts[c]
+      indices[c] = currentVal % slots
+      currentVal = currentVal / slots // integer division
+    }
+    
+    // 2. Build Collection ID (From Last to First)
+    let collectionId = Bytes.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000") as Bytes
+    for (let c = conditionIds.length - 1; c >= 0; c--) {
+      let indexSet = BigInt.fromI32(1).leftShift(indices[c] as u8)
+      collectionId = getCollectionId(collectionId, conditionIds[c], indexSet)
+    }
+    
+    // 3. Calculate Position ID
+    let positionId = getPositionId(entity.collateralToken, collectionId)
+    savedPositionIds.push(positionId)
+    
+    // 4. Create Map Entity
+    let mapEntity = new PositionMap(positionId.toHexString())
+    mapEntity.fpmm = entity.id // Store as link
+    mapEntity.outcomeIndex = k
+    mapEntity.save()
+  }
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleFPMMFundingRemoved(event: FPMMFundingRemovedEvent): void {
-  let entity = new FPMMFundingRemoved(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.funder = event.params.funder
-  entity.amountsRemoved = event.params.amountsRemoved
-  entity.collateralRemovedFromFeePool =
-    event.params.collateralRemovedFromFeePool
-  entity.sharesBurnt = event.params.sharesBurnt
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleFPMMBuy(event: FPMMBuyEvent): void {
-  let entity = new FPMMBuy(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.buyer = event.params.buyer
-  entity.investmentAmount = event.params.investmentAmount
-  entity.feeAmount = event.params.feeAmount
-  entity.outcomeIndex = event.params.outcomeIndex
-  entity.outcomeTokensBought = event.params.outcomeTokensBought
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleFPMMSell(event: FPMMSellEvent): void {
-  let entity = new FPMMSell(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.seller = event.params.seller
-  entity.returnAmount = event.params.returnAmount
-  entity.feeAmount = event.params.feeAmount
-  entity.outcomeIndex = event.params.outcomeIndex
-  entity.outcomeTokensSold = event.params.outcomeTokensSold
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleCloneCreated(event: CloneCreatedEvent): void {
-  let entity = new CloneCreated(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.target = event.params.target
-  entity.clone = event.params.clone
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
+  entity.positionIds = savedPositionIds
   entity.save()
 }
