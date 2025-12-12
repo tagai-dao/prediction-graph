@@ -21,6 +21,8 @@ dataSources:
       abis:
         - name: FPMMDeterministicFactory
           file: ./abis/FPMMDeterministicFactory.json
+        - name: ConditionalTokens
+          file: ./abis/ConditionalTokens.json
       eventHandlers:
         - event: FixedProductMarketMakerCreation(indexed address,address,address,address,bytes32[],uint256,uint256,uint256)
           handler: handleFixedProductMarketMakerCreation
