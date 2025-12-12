@@ -2,7 +2,7 @@ import { Transfer as TransferEvent } from "../generated/templates/FixedProductMa
 import { FPMMFundingAdded as FPMMFundingAddedEvent, FPMMFundingRemoved as FPMMFundingRemovedEvent, FPMMBuy as FPMMBuyEvent, FPMMSell as FPMMSellEvent } from "../generated/templates/FixedProductMarketMaker/FixedProductMarketMaker"
 import { Address } from "@graphprotocol/graph-ts"
 import { getOrCreateUser, getOrCreateUserHolding, getIndex } from "./utils"
-import { FPMMFundingAdded, FPMMFundingRemoved, FPMMBuy, FPMMSell } from "../generated/schema"
+import { FPMMFundingAdded, FPMMFundingRemoved, FPMMBuy, FPMMSell, FixedProductMarketMakerCreation } from "../generated/schema"
 
 export function handleTransfer(event: TransferEvent): void {
     let marketAddress = event.address
@@ -79,6 +79,13 @@ export function handleFPMMBuy(event: FPMMBuyEvent): void {
   entity.transactionHash = event.transaction.hash
 
   entity.save()
+
+  // Update Market Volume
+  let market = FixedProductMarketMakerCreation.load(event.address)
+  if (market != null) {
+      market.collateralVolume = market.collateralVolume.plus(event.params.investmentAmount)
+      market.save()
+  }
 }
 
 export function handleFPMMSell(event: FPMMSellEvent): void {
@@ -97,4 +104,11 @@ export function handleFPMMSell(event: FPMMSellEvent): void {
   entity.transactionHash = event.transaction.hash
 
   entity.save()
+
+  // Update Market Volume
+  let market = FixedProductMarketMakerCreation.load(event.address)
+  if (market != null) {
+      market.collateralVolume = market.collateralVolume.plus(event.params.returnAmount)
+      market.save()
+  }
 }

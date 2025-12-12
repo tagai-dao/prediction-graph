@@ -25,6 +25,7 @@ type FixedProductMarketMakerCreation @entity(immutable: false) {
   transactionHash: Bytes!
   solved: Boolean! # bool
   outcomePayouts: [BigInt!] # uint256[] - Payout numerators for each outcome slot
+  collateralVolume: BigInt! # uint256 - Total volume in collateral tokens
 }
 
 type User @entity(immutable: false) {

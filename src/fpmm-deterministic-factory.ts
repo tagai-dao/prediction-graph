@@ -30,6 +30,7 @@ export function handleFixedProductMarketMakerCreation(
   entity.blockTimestamp = event.block.timestamp
   entity.transactionHash = event.transaction.hash
   entity.solved = false
+  entity.collateralVolume = BigInt.fromI32(0)
 
   // Create or load Condition Entity
   if (entity.conditionIds.length > 0) {
