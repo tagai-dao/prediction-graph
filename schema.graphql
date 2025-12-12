@@ -3,6 +3,11 @@ type Counter @entity(immutable: false) {
   index: BigInt!
 }
 
+type Condition @entity(immutable: false) {
+  id: Bytes! # conditionId
+  fpmmIds: [Bytes!]! # Manual reverse mapping to FPMMs
+}
+
 type FixedProductMarketMakerCreation @entity(immutable: false) {
   id: Bytes!
   index: BigInt!
@@ -19,6 +24,7 @@ type FixedProductMarketMakerCreation @entity(immutable: false) {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
   solved: Boolean! # bool
+  outcomePayouts: [BigInt!] # uint256[] - Payout numerators for each outcome slot
 }
 
 type User @entity(immutable: false) {
@@ -34,6 +40,7 @@ type User @entity(immutable: false) {
 type UserHolding @entity(immutable: false){
   id: Bytes! # Set as `${marketAddress}-${userAddress}`
   user: User!
+  index: BigInt!
   fpmm: FixedProductMarketMakerCreation!
   balances: [BigInt!]! # uint256[] - Outcome Token Balances
   lpHolding: BigInt! # uint256 - LP Token Balance

@@ -3,12 +3,15 @@ import {
   TransferBatch as TransferBatchEvent,
   ApprovalForAll as ApprovalForAllEvent,
   URI as URIEvent,
+  ConditionResolution as ConditionResolutionEvent,
 } from "../generated/ConditionalTokens/ConditionalTokens"
 import {
-  PositionMap
+  PositionMap,
+  FixedProductMarketMakerCreation,
+  Condition
 } from "../generated/schema"
 import { getOrCreateUser, getOrCreateUserHolding } from "./utils"
-import { Address } from "@graphprotocol/graph-ts"
+import { Address, Bytes, BigInt } from "@graphprotocol/graph-ts"
 
 export function handleTransferSingle(event: TransferSingleEvent): void {
   // Update User Balances
@@ -86,4 +89,27 @@ export function handleTransferBatch(event: TransferBatchEvent): void {
       }
     }
   }
+}
+
+export function handleConditionResolution(event: ConditionResolutionEvent): void {
+    let conditionId = event.params.conditionId
+    let payoutNumerators = event.params.payoutNumerators
+
+    // Load the Condition entity
+    let condition = Condition.load(conditionId)
+    if (condition != null) {
+        // Find all FPMMs linked to this condition
+        let fpmmIds = condition.fpmmIds
+        
+        for(let i=0; i<fpmmIds.length; i++) {
+            let fpmmId = fpmmIds[i]
+            let market = FixedProductMarketMakerCreation.load(fpmmId)
+            
+            if (market != null) {
+                market.solved = true
+                market.outcomePayouts = payoutNumerators
+                market.save()
+            }
+        }
+    }
 }

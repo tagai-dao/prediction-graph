@@ -3,7 +3,8 @@ import {
 } from "../generated/FPMMDeterministicFactory/FPMMDeterministicFactory"
 import {
   FixedProductMarketMakerCreation,
-  PositionMap
+  PositionMap,
+  Condition
 } from "../generated/schema"
 import { FixedProductMarketMaker } from "../generated/templates"
 import { ConditionalTokens } from "../generated/ConditionalTokens/ConditionalTokens"
@@ -29,6 +30,20 @@ export function handleFixedProductMarketMakerCreation(
   entity.blockTimestamp = event.block.timestamp
   entity.transactionHash = event.transaction.hash
   entity.solved = false
+
+  // Create or load Condition Entity
+  if (entity.conditionIds.length > 0) {
+      let conditionId = entity.conditionIds[0]
+      let condition = Condition.load(conditionId)
+      if (condition == null) {
+          condition = new Condition(conditionId)
+          condition.fpmmIds = []
+      }
+      let fpmmIds = condition.fpmmIds
+      fpmmIds.push(entity.fixedProductMarketMaker)
+      condition.fpmmIds = fpmmIds
+      condition.save()
+  }
 
   // Create Template
   FixedProductMarketMaker.create(event.params.fixedProductMarketMaker)

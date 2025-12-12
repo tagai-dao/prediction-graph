@@ -37,6 +37,7 @@ export function getOrCreateUserHolding(userAddress: Address, marketAddress: Byte
     
     if (holding == null) {
         holding = new UserHolding(id)
+        holding.index = getIndex("UserHolding");
         holding.user = userAddress
         holding.fpmm = marketAddress as Bytes
         holding.lpHolding = BigInt.fromI32(0)
