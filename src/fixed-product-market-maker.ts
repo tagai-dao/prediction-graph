@@ -1,4 +1,4 @@
-import { Transfer as TransferEvent } from "../generated/templates/FixedProductMarketMaker/ERC20"
+import { Transfer as TransferEvent } from "../generated/templates/FixedProductMarketMaker/FixedProductMarketMaker"
 import { FPMMFundingAdded as FPMMFundingAddedEvent, FPMMFundingRemoved as FPMMFundingRemovedEvent, FPMMBuy as FPMMBuyEvent, FPMMSell as FPMMSellEvent } from "../generated/templates/FixedProductMarketMaker/FixedProductMarketMaker"
 import { Address } from "@graphprotocol/graph-ts"
 import { getOrCreateUser, getOrCreateUserHolding, getIndex } from "./utils"

@@ -111,21 +111,23 @@ export function handleFixedProductMarketMakerCreation(
     
     if (!positionIdResult.reverted) {
         let positionIdBigInt = positionIdResult.value
-        // Convert BigInt to Bytes (32 bytes, big endian usually desired for IDs)
-        // BigInt in Graph TS behaves like a number, we want its byte representation.
-        // Bytes.fromBigInt() does this? Let's verify. Yes.
-        // But wait, Position ID is usually treated as a hash (bytes32).
-        // The contract returns uint256.
-        let positionIdBytes = Bytes.fromByteArray(ByteArray.fromBigInt(positionIdBigInt))
         
-        // Ensure it's padded to 32 bytes if needed, though usually hash-like IDs are fine.
-        // Actually, let's just use the hex string for the ID which is safest for Entity IDs.
+        // Convert BigInt to hex string for Entity ID
+        // toHexString() may return odd-length hex strings (without leading zeros)
+        // ByteArray.fromHexString() requires even-length hex strings
         let positionIdHex = positionIdBigInt.toHexString()
         
-        // For the array storage (Bytes[])
-        // We can store the reversed bytes or just the bytes.
-        // Let's stick to consistent Bytes representation.
-        // Using Bytes.fromHexString(positionIdHex) ensures it matches the hex string ID.
+        // Ensure hex string has even length (each byte needs 2 hex chars)
+        // Remove '0x' prefix, check length, pad if odd, then add prefix back
+        let hexWithoutPrefix = positionIdHex.slice(2) // Remove '0x'
+        if (hexWithoutPrefix.length % 2 == 1) {
+            // If odd length, pad with leading zero
+            hexWithoutPrefix = "0" + hexWithoutPrefix
+        }
+        positionIdHex = "0x" + hexWithoutPrefix
+        
+        // Convert to Bytes for array storage
+        // Bytes.fromHexString() now works because hex string has even length
         let positionId = Bytes.fromHexString(positionIdHex) as Bytes
         
         savedPositionIds.push(positionId)
