@@ -57,6 +57,7 @@ type PositionMap @entity(immutable: true) {
 type FPMMFundingAdded @entity(immutable: true) {
   id: Bytes!
   index: BigInt!
+  fpmm: FixedProductMarketMakerCreation!
   funder: Bytes! # address
   amountsAdded: [BigInt!]! # uint256[]
   sharesMinted: BigInt! # uint256
@@ -68,6 +69,7 @@ type FPMMFundingAdded @entity(immutable: true) {
 type FPMMFundingRemoved @entity(immutable: true) {
   id: Bytes!
   index: BigInt!
+  fpmm: FixedProductMarketMakerCreation!
   funder: Bytes! # address
   amountsRemoved: [BigInt!]! # uint256[]
   collateralRemovedFromFeePool: BigInt! # uint256
@@ -80,6 +82,7 @@ type FPMMFundingRemoved @entity(immutable: true) {
 type FPMMBuy @entity(immutable: true) {
   id: Bytes!
   index: BigInt!
+  fpmm: FixedProductMarketMakerCreation!
   buyer: Bytes! # address
   investmentAmount: BigInt! # uint256
   feeAmount: BigInt! # uint256
@@ -93,6 +96,7 @@ type FPMMBuy @entity(immutable: true) {
 type FPMMSell @entity(immutable: true) {
   id: Bytes!
   index: BigInt!
+  fpmm: FixedProductMarketMakerCreation!
   seller: Bytes! # address
   returnAmount: BigInt! # uint256
   feeAmount: BigInt! # uint256
