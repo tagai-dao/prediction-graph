@@ -65,6 +65,8 @@ templates:
       file: ./src/fixed-product-market-maker.ts
       entities:
         - UserHolding
+        - FPMMFunding
+        - FPMMTrade
       abis:
         - name: FixedProductMarketMaker
           file: ./abis/FixedProductMarketMaker.json

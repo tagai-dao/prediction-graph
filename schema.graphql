@@ -54,54 +54,41 @@ type PositionMap @entity(immutable: true) {
   outcomeIndex: Int!
 }
 
-type FPMMFundingAdded @entity(immutable: true) {
+enum FPMMFundingType {
+  Added
+  Removed
+}
+
+type FPMMFunding @entity(immutable: true) {
   id: Bytes!
   index: BigInt!
+  type: FPMMFundingType!
   fpmm: FixedProductMarketMakerCreation!
   funder: Bytes! # address
-  amountsAdded: [BigInt!]! # uint256[]
-  sharesMinted: BigInt! # uint256
+  amounts: [BigInt!]! # uint256[] - amountsAdded or amountsRemoved
+  shares: BigInt! # uint256 - sharesMinted or sharesBurnt
+  collateralRemovedFromFeePool: BigInt # uint256 - Only for Removed
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
 
-type FPMMFundingRemoved @entity(immutable: true) {
-  id: Bytes!
-  index: BigInt!
-  fpmm: FixedProductMarketMakerCreation!
-  funder: Bytes! # address
-  amountsRemoved: [BigInt!]! # uint256[]
-  collateralRemovedFromFeePool: BigInt! # uint256
-  sharesBurnt: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+enum FPMMTradeType {
+  Buy
+  Sell
 }
 
-type FPMMBuy @entity(immutable: true) {
+type FPMMTrade @entity(immutable: true) {
   id: Bytes!
   index: BigInt!
+  type: FPMMTradeType!
   fpmm: FixedProductMarketMakerCreation!
-  buyer: Bytes! # address
-  investmentAmount: BigInt! # uint256
+  creator: Bytes! # address - buyer or seller
+  collateralAmount: BigInt! # uint256 - investmentAmount or returnAmount
   feeAmount: BigInt! # uint256
   outcomeIndex: BigInt! # uint256
-  outcomeTokensBought: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type FPMMSell @entity(immutable: true) {
-  id: Bytes!
-  index: BigInt!
-  fpmm: FixedProductMarketMakerCreation!
-  seller: Bytes! # address
-  returnAmount: BigInt! # uint256
-  feeAmount: BigInt! # uint256
-  outcomeIndex: BigInt! # uint256
-  outcomeTokensSold: BigInt! # uint256
+  outcomeTokensAmount: BigInt! # uint256 - outcomeTokensBought or outcomeTokensSold
+  outcomeTokenMarginalPrices: [BigDecimal!]!
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
