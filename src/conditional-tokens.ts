@@ -13,9 +13,19 @@ import {
 import { getOrCreateUser, getOrCreateUserHolding } from "./utils"
 import { Address, Bytes, BigInt } from "@graphprotocol/graph-ts"
 
+// Helper to normalize position ID strings (ensure even length)
+function normalizePositionId(id: BigInt): string {
+  let hex = id.toHexString()
+  let hexWithoutPrefix = hex.slice(2)
+  if (hexWithoutPrefix.length % 2 == 1) {
+    hexWithoutPrefix = "0" + hexWithoutPrefix
+  }
+  return "0x" + hexWithoutPrefix
+}
+
 export function handleTransferSingle(event: TransferSingleEvent): void {
   // Update User Balances
-  let positionId = event.params.id.toHexString()
+  let positionId = normalizePositionId(event.params.id)
   let map = PositionMap.load(positionId)
   
   if (map != null) {
@@ -56,7 +66,7 @@ export function handleTransferBatch(event: TransferBatchEvent): void {
   let zeroAddress = Address.fromString("0x0000000000000000000000000000000000000000")
 
   for (let i = 0; i < ids.length; i++) {
-    let positionId = ids[i].toHexString()
+    let positionId = normalizePositionId(ids[i])
     let map = PositionMap.load(positionId)
     
     if (map != null) {
