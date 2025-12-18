@@ -8,9 +8,10 @@ import {
 import {
   PositionMap,
   FixedProductMarketMakerCreation,
-  Condition
+  Condition,
+  ConditionalTokensTransfer
 } from "../generated/schema"
-import { getOrCreateUser, getOrCreateUserHolding } from "./utils"
+import { getOrCreateUser, getOrCreateUserHolding, getIndex } from "./utils"
 import { Address, Bytes, BigInt } from "@graphprotocol/graph-ts"
 
 // Helper to normalize position ID strings (ensure even length)
@@ -25,13 +26,30 @@ function normalizePositionId(id: BigInt): string {
 
 export function handleTransferSingle(event: TransferSingleEvent): void {
   // Update User Balances
-  let positionId = normalizePositionId(event.params.id)
-  let map = PositionMap.load(positionId)
+  let positionIdHex = normalizePositionId(event.params.id)
+  let map = PositionMap.load(positionIdHex)
   
   if (map != null) {
     let marketAddress = map.fpmm
     let outcomeIndex = map.outcomeIndex
     let zeroAddress = Address.fromString("0x0000000000000000000000000000000000000000")
+
+    // Record Transfer
+    let transfer = new ConditionalTokensTransfer(
+      event.transaction.hash.concatI32(event.logIndex.toI32())
+    )
+    transfer.index = getIndex("ConditionalTokensTransfer")
+    transfer.fpmm = marketAddress
+    transfer.from = event.params.from
+    transfer.to = event.params.to
+    // Convert hex string back to Bytes for storage
+    transfer.positionId = Bytes.fromHexString(positionIdHex)
+    transfer.outcomeIndex = BigInt.fromI32(outcomeIndex)
+    transfer.value = event.params.value
+    transfer.blockNumber = event.block.number
+    transfer.blockTimestamp = event.block.timestamp
+    transfer.transactionHash = event.transaction.hash
+    transfer.save()
 
     // From
     if (event.params.from != zeroAddress) {
@@ -66,13 +84,28 @@ export function handleTransferBatch(event: TransferBatchEvent): void {
   let zeroAddress = Address.fromString("0x0000000000000000000000000000000000000000")
 
   for (let i = 0; i < ids.length; i++) {
-    let positionId = normalizePositionId(ids[i])
-    let map = PositionMap.load(positionId)
+    let positionIdHex = normalizePositionId(ids[i])
+    let map = PositionMap.load(positionIdHex)
     
     if (map != null) {
       let marketAddress = map.fpmm
       let outcomeIndex = map.outcomeIndex
       let value = values[i]
+
+      // Record Transfer
+      let transferId = event.transaction.hash.concatI32(event.logIndex.toI32()).concatI32(i)
+      let transfer = new ConditionalTokensTransfer(transferId)
+      transfer.index = getIndex("ConditionalTokensTransfer")
+      transfer.fpmm = marketAddress
+      transfer.from = event.params.from
+      transfer.to = event.params.to
+      transfer.positionId = Bytes.fromHexString(positionIdHex)
+      transfer.outcomeIndex = BigInt.fromI32(outcomeIndex)
+      transfer.value = value
+      transfer.blockNumber = event.block.number
+      transfer.blockTimestamp = event.block.timestamp
+      transfer.transactionHash = event.transaction.hash
+      transfer.save()
 
       // From
       if (event.params.from != zeroAddress) {

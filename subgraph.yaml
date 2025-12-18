@@ -41,6 +41,7 @@ dataSources:
       entities:
         - TransferSingle
         - TransferBatch
+        - ConditionalTokensTransfer
       abis:
         - name: ConditionalTokens
           file: ./abis/ConditionalTokens.json

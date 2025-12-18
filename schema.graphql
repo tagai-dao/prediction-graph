@@ -93,3 +93,17 @@ type FPMMTrade @entity(immutable: true) {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
+
+type ConditionalTokensTransfer @entity(immutable: true) {
+  id: Bytes!
+  index: BigInt!
+  fpmm: FixedProductMarketMakerCreation!
+  from: Bytes! # address
+  to: Bytes! # address
+  positionId: Bytes! # bytes32
+  outcomeIndex: BigInt!
+  value: BigInt!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
