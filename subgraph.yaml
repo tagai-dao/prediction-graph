@@ -1,8 +1,13 @@
 specVersion: 1.3.0
+features:
+  - grafting
 indexerHints:
   prune: auto
 schema:
   file: ./schema.graphql
+graft:
+  base: QmXhJE7BCs9ZieKorSAVhkD5BWgrhacs1mvdPu4UFqyWvj
+  block: 76306919
 dataSources:
   - kind: ethereum
     name: FPMMDeterministicFactory
@@ -53,6 +58,29 @@ dataSources:
         - event: ConditionResolution(indexed bytes32,indexed address,indexed bytes32,uint256,uint256[])
           handler: handleConditionResolution
       file: ./src/conditional-tokens.ts
+  - kind: ethereum
+    name: FixedProductMarketMakerCreation
+    network: bsc
+    source:
+      address: "0xF29faEc2428376d650d84471B4c41499342c6C5a"
+      abi: FPMMDeterministicFactory
+      startBlock: 76306919
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - FixedProductMarketMakerCreation
+        - PositionMap
+      abis:
+        - name: FPMMDeterministicFactory
+          file: ./abis/FPMMDeterministicFactory.json
+        - name: ConditionalTokens
+          file: ./abis/ConditionalTokens.json
+      eventHandlers:
+        - event: FixedProductMarketMakerCreation(indexed address,address,address,address,bytes32[],uint256,uint256,uint256)
+          handler: handleFixedProductMarketMakerCreation
+      file: ./src/fpmm-deterministic-factory.ts
 templates:
   - kind: ethereum/contract
     name: FixedProductMarketMaker
