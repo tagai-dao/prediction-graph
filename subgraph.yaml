@@ -7,7 +7,7 @@ schema:
   file: ./schema.graphql
 graft:
   base: QmXhJE7BCs9ZieKorSAVhkD5BWgrhacs1mvdPu4UFqyWvj
-  block: 76306919
+  block: 77458510
 dataSources:
   - kind: ethereum
     name: FPMMDeterministicFactory
@@ -62,9 +62,9 @@ dataSources:
     name: FixedProductMarketMakerCreation
     network: bsc
     source:
-      address: "0xF29faEc2428376d650d84471B4c41499342c6C5a"
+      address: "0xB830cF8308eA73DF9dFAc01a6E3CcDd230A1e7Dd"
       abi: FPMMDeterministicFactory
-      startBlock: 76306919
+      startBlock: 77458512
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
